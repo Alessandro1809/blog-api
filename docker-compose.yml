@@ -1,0 +1,12 @@
+# docker-compose.yml
+services:
+  api:
+    build: .
+    environment:
+      DATABASE_URL: "${DATABASE_URL}"
+      PORT: 3000
+      NODE_ENV: production
+      CLERK_PUBLISHABLE_KEY: "${CLERK_PUBLISHABLE_KEY}"
+      CLERK_SECRET_KEY: "${CLERK_SECRET_KEY}"
+    ports:
+      - "3000:3000"
