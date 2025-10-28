@@ -1,15 +1,16 @@
 import { type FastifyReply } from 'fastify'
-import { type PrismaClient } from '../generated/prisma/index.js'
+import { eq } from 'drizzle-orm'
+import { type Database } from '../db/index.js'
+import { posts } from '../db/schema.js'
 
 export async function validatePostOwnership(
-  prisma: PrismaClient,
+  db: Database,
   postId: string,
   userId: string,
   reply: FastifyReply
 ): Promise<{ valid: boolean; post?: any }> {
-  const post = await prisma.post.findUnique({
-    where: { id: postId }
-  })
+  const result = await db.select().from(posts).where(eq(posts.id, postId)).limit(1)
+  const post = result[0]
 
   if (!post) {
     reply.status(404).send({ error: 'Post not found' })

@@ -1,5 +1,5 @@
 import { type FastifyRequest, type FastifyReply } from 'fastify'
-import { type PrismaClient } from '../generated/prisma/index.js'
+import { type Database } from '../db/index.js'
 import { PostService } from '../services/post.service.js'
 import { SearchService } from '../services/search.service.js'
 import { ViewTrackingService } from '../services/view-tracking.service.js'
@@ -11,12 +11,12 @@ import { CATEGORIES } from '../constants/categories.js'
 export const getAllPosts = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const { status, limit, offset, search, date, categorie } = request.query as any
 
-  const postService = new PostService(prisma)
-  const searchService = new SearchService(prisma)
+  const postService = new PostService(db)
+  const searchService = new SearchService(db)
 
   let posts: any[]
   let total: number
@@ -46,13 +46,13 @@ export const getAllPosts = async (
 export const getPostById = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const { id } = request.params as { id: string }
   const { skipViewIncrement } = request.query as { skipViewIncrement?: string }
 
-  const postService = new PostService(prisma)
-  const viewTrackingService = new ViewTrackingService(prisma)
+  const postService = new PostService(db)
+  const viewTrackingService = new ViewTrackingService(db)
 
   const post = await postService.findPostById(id)
 
@@ -77,13 +77,13 @@ export const getPostById = async (
 export const getPostBySlug = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const { slug } = request.params as { slug: string }
   const { skipViewIncrement } = request.query as { skipViewIncrement?: string }
 
-  const postService = new PostService(prisma)
-  const viewTrackingService = new ViewTrackingService(prisma)
+  const postService = new PostService(db)
+  const viewTrackingService = new ViewTrackingService(db)
 
   const post = await postService.findPostBySlug(slug)
 
@@ -108,12 +108,12 @@ export const getPostBySlug = async (
 export const createPost = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const body = request.body as any
   const authorId = (request as any).user.sub
 
-  const postService = new PostService(prisma)
+  const postService = new PostService(db)
 
   const existingPost = await postService.checkSlugExists(body.slug)
   if (existingPost) {
@@ -127,15 +127,15 @@ export const createPost = async (
 export const updatePost = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const { id } = request.params as any
   const body = request.body as any
   const userId = (request as any).user.sub
 
-  const postService = new PostService(prisma)
+  const postService = new PostService(db)
 
-  const validation = await validatePostOwnership(prisma, id, userId, reply)
+  const validation = await validatePostOwnership(db, id, userId, reply)
   if (!validation.valid) return
 
   const existingPost = validation.post
@@ -154,14 +154,14 @@ export const updatePost = async (
 export const deletePost = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
   const { id } = request.params as any
   const userId = (request as any).user.sub
 
-  const postService = new PostService(prisma)
+  const postService = new PostService(db)
 
-  const validation = await validatePostOwnership(prisma, id, userId, reply)
+  const validation = await validatePostOwnership(db, id, userId, reply)
   if (!validation.valid) return
 
   await postService.deletePost(id)
@@ -178,8 +178,8 @@ export const getCategories = async (
 export const getPostStats = async (
   request: FastifyRequest,
   reply: FastifyReply,
-  prisma: PrismaClient
+  db: Database
 ) => {
-  const postService = new PostService(prisma)
+  const postService = new PostService(db)
   return postService.getStats()
 }

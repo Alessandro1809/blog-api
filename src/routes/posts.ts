@@ -20,7 +20,7 @@ const postsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /posts/stats/views - Obtener estadísticas de posts (público)
   fastify.get('/posts/stats/views', async (request, reply) => {
-    return getPostStats(request, reply, fastify.prisma)
+    return getPostStats(request, reply, fastify.db)
   })
 
   // GET /posts - Listar posts (público)
@@ -29,38 +29,38 @@ const postsRoutes: FastifyPluginAsync = async (fastify) => {
       querystring: PostQuerySchema
     }
   }, async (request, reply) => {
-    return getAllPosts(request, reply, fastify.prisma)
+    return getAllPosts(request, reply, fastify.db)
   })
 
   // GET /posts/id/:id - Obtener post por ID (público)
   fastify.get('/posts/id/:id', async (request, reply) => {
-    return getPostById(request, reply, fastify.prisma)
+    return getPostById(request, reply, fastify.db)
   })
 
   // GET /posts/:slug - Obtener post por slug (público)
   fastify.get('/posts/:slug', async (request, reply) => {
-    return getPostBySlug(request, reply, fastify.prisma)
+    return getPostBySlug(request, reply, fastify.db)
   })
 
   // POST /posts - Crear post (protegido)
   fastify.post('/posts', {
     preHandler: [fastify.authenticate]
   }, async (request, reply) => {
-    return createPost(request, reply, fastify.prisma)
+    return createPost(request, reply, fastify.db)
   })
 
   // PUT /posts/:id - Actualizar post (protegido)
   fastify.put('/posts/:id', {
     preHandler: [fastify.authenticate]
   }, async (request, reply) => {
-    return updatePost(request, reply, fastify.prisma)
+    return updatePost(request, reply, fastify.db)
   })
 
   // DELETE /posts/:id - Eliminar post (protegido)
   fastify.delete('/posts/:id', {
     preHandler: [fastify.authenticate]
   }, async (request, reply) => {
-    return deletePost(request, reply, fastify.prisma)
+    return deletePost(request, reply, fastify.db)
   })
 }
 

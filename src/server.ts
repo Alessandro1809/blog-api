@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 
 import authPlugin from './plugins/auth.js';
-import prismaPlugin from './plugins/prisma.js';
+import drizzlePlugin from './plugins/drizzle.js';
 import postsRoutes from './routes/posts.js';
 
 const fastify = Fastify({
@@ -22,13 +22,13 @@ async function start() {
     // Registrar CORS
     await fastify.register(cors, {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
+    ? ['*'] 
     : true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // ← Agregar esto
   allowedHeaders: ['Content-Type', 'Authorization'],
 })
     // Registrar plugins
-    await fastify.register(prismaPlugin)
+    await fastify.register(drizzlePlugin)
     await fastify.register(authPlugin)
 
     // Registrar rutas

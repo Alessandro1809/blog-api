@@ -1,4 +1,5 @@
-import { type PrismaClient } from '../generated/prisma/index.js'
+import { sql } from 'drizzle-orm'
+import { type Database } from '../db/index.js'
 
 interface SearchFilters {
   search?: string
@@ -13,7 +14,7 @@ interface SearchResult {
 }
 
 export class SearchService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private db: Database) {}
 
   async searchPosts(
     filters: SearchFilters,
@@ -23,56 +24,61 @@ export class SearchService {
     const { search, status, categorie, date } = filters
     const searchPattern = `%${search}%`
     
-    const conditions: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
-
-    conditions.push(`(
-      LOWER(title) LIKE LOWER($${paramIndex}) OR
-      LOWER(excerpt) LIKE LOWER($${paramIndex}) OR
-      LOWER(categorie) LIKE LOWER($${paramIndex}) OR
-      $${paramIndex + 1} = ANY(tags) OR
-      LOWER(content::text) LIKE LOWER($${paramIndex})
-    )`)
-    params.push(searchPattern, search)
-    paramIndex += 2
+    let query = `
+      SELECT 
+        id, title, slug, categorie, tags, content, excerpt, 
+        status, featuredImage, createdAt, updatedAt, authorId, views
+      FROM posts
+      WHERE (
+        LOWER(title) LIKE LOWER('${searchPattern}') OR
+        LOWER(excerpt) LIKE LOWER('${searchPattern}') OR
+        LOWER(categorie) LIKE LOWER('${searchPattern}') OR
+        json_extract(tags, '$') LIKE '%"${search}"%' OR
+        LOWER(json_extract(content, '$')) LIKE LOWER('${searchPattern}')
+      )`
 
     if (status) {
-      conditions.push(`status = $${paramIndex}::text::"PostStatus"`)
-      params.push(status)
-      paramIndex++
+      query += ` AND status = '${status}'`
     }
 
     if (categorie) {
-      conditions.push(`categorie = $${paramIndex}::text::"PostCategory"`)
-      params.push(categorie)
-      paramIndex++
+      query += ` AND categorie = '${categorie}'`
     }
 
     if (date) {
-      conditions.push(`"createdAt" >= $${paramIndex}::timestamp`)
-      params.push(new Date(date).toISOString())
-      paramIndex++
+      const dateTimestamp = Math.floor(new Date(date).getTime() / 1000)
+      query += ` AND createdAt >= ${dateTimestamp}`
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    query += ` ORDER BY createdAt DESC LIMIT ${limit} OFFSET ${offset}`
 
-    const posts: any[] = await this.prisma.$queryRawUnsafe(`
-      SELECT 
-        id, title, slug, categorie, tags, content, excerpt, 
-        status, "featuredImage", "createdAt", "updatedAt", "authorId"
-      FROM posts
-      ${whereClause}
-      ORDER BY "createdAt" DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `, ...params, limit, offset)
+    const posts: any[] = await this.db.all(sql.raw(query))
 
-    const totalResult: any = await this.prisma.$queryRawUnsafe(`
+    let countQuery = `
       SELECT COUNT(*) as count
       FROM posts
-      ${whereClause}
-    `, ...params.slice(0, params.length))
+      WHERE (
+        LOWER(title) LIKE LOWER('${searchPattern}') OR
+        LOWER(excerpt) LIKE LOWER('${searchPattern}') OR
+        LOWER(categorie) LIKE LOWER('${searchPattern}') OR
+        json_extract(tags, '$') LIKE '%"${search}"%' OR
+        LOWER(json_extract(content, '$')) LIKE LOWER('${searchPattern}')
+      )`
 
+    if (status) {
+      countQuery += ` AND status = '${status}'`
+    }
+
+    if (categorie) {
+      countQuery += ` AND categorie = '${categorie}'`
+    }
+
+    if (date) {
+      const dateTimestamp = Math.floor(new Date(date).getTime() / 1000)
+      countQuery += ` AND createdAt >= ${dateTimestamp}`
+    }
+
+    const totalResult: any = await this.db.all(sql.raw(countQuery))
     const total = Number(totalResult[0]?.count || 0)
 
     return { posts, total }

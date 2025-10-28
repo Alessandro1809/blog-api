@@ -1,4 +1,6 @@
-import { type PrismaClient } from '../generated/prisma/index.js'
+import { eq, and, gte, desc, sql, count } from 'drizzle-orm'
+import { type Database } from '../db/index.js'
+import { posts } from '../db/schema.js'
 import { CATEGORY_LABEL_TO_ENUM } from '../constants/categories.js'
 
 interface PostFilters {
@@ -12,62 +14,42 @@ interface CreatePostData {
 }
 
 export class PostService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private db: Database) {}
 
   async findAllPosts(filters: PostFilters, limit: number, offset: number) {
-    const where: any = {}
+    const conditions = []
 
     if (filters.status) {
-      where.status = filters.status
+      conditions.push(eq(posts.status, filters.status))
     }
 
     if (filters.categorie) {
-      where.categorie = filters.categorie
+      conditions.push(eq(posts.categorie, filters.categorie))
     }
 
     if (filters.date) {
-      where.createdAt = {
-        gte: new Date(filters.date)
-      }
+      const dateTimestamp = Math.floor(new Date(filters.date).getTime() / 1000)
+      conditions.push(gte(posts.createdAt, new Date(dateTimestamp * 1000)))
     }
 
-    const posts = await this.prisma.post.findMany({
-      where,
-      take: limit,
-      skip: offset,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        categorie: true,
-        tags: true,
-        content: true,
-        excerpt: true,
-        status: true,
-        featuredImage: true,
-        views: true,
-        createdAt: true,
-        updatedAt: true,
-        authorId: true
-      }
-    })
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    const total = await this.prisma.post.count({ where })
+    const [postsResult, totalResult] = await Promise.all([
+      this.db.select().from(posts).where(whereClause).orderBy(desc(posts.createdAt)).limit(limit).offset(offset),
+      this.db.select({ count: count() }).from(posts).where(whereClause)
+    ])
 
-    return { posts, total }
+    return { posts: postsResult, total: totalResult[0]?.count || 0 }
   }
 
   async findPostById(id: string) {
-    return this.prisma.post.findUnique({
-      where: { id }
-    })
+    const result = await this.db.select().from(posts).where(eq(posts.id, id)).limit(1)
+    return result[0] || null
   }
 
   async findPostBySlug(slug: string) {
-    return this.prisma.post.findUnique({
-      where: { slug }
-    })
+    const result = await this.db.select().from(posts).where(eq(posts.slug, slug)).limit(1)
+    return result[0] || null
   }
 
   async createPost(data: CreatePostData, authorId: string) {
@@ -75,12 +57,13 @@ export class PostService {
       data.categorie = CATEGORY_LABEL_TO_ENUM[data.categorie]
     }
 
-    return this.prisma.post.create({
-      data: {
-        ...data,
-        authorId
-      } as any
-    })
+    const result = await this.db.insert(posts).values({
+      ...data,
+      authorId,
+      tags: data.tags || []
+    } as any).returning()
+
+    return result[0]
   }
 
   async updatePost(id: string, data: CreatePostData) {
@@ -88,48 +71,40 @@ export class PostService {
       data.categorie = CATEGORY_LABEL_TO_ENUM[data.categorie]
     }
 
-    return this.prisma.post.update({
-      where: { id },
-      data
-    })
+    const result = await this.db.update(posts).set({
+      ...data,
+      updatedAt: new Date()
+    }).where(eq(posts.id, id)).returning()
+
+    return result[0]
   }
 
   async deletePost(id: string) {
-    return this.prisma.post.delete({
-      where: { id }
-    })
+    await this.db.delete(posts).where(eq(posts.id, id))
   }
 
   async checkSlugExists(slug: string) {
-    return this.prisma.post.findUnique({
-      where: { slug }
-    })
+    const result = await this.db.select().from(posts).where(eq(posts.slug, slug)).limit(1)
+    return result[0] || null
   }
 
   async getStats() {
-    const [totalPosts, publishedPosts, draftPosts, viewsAggregate, postsByCategory] = await Promise.all([
-      this.prisma.post.count(),
-      this.prisma.post.count({ where: { status: 'PUBLISHED' } }),
-      this.prisma.post.count({ where: { status: 'DRAFT' } }),
-      this.prisma.post.aggregate({
-        _sum: {
-          views: true
-        }
-      }),
-      this.prisma.post.groupBy({
-        by: ['categorie'],
-        _count: true
-      })
+    const [totalResult, publishedResult, draftResult, viewsResult, categoryResult] = await Promise.all([
+      this.db.select({ count: count() }).from(posts),
+      this.db.select({ count: count() }).from(posts).where(eq(posts.status, 'PUBLISHED')),
+      this.db.select({ count: count() }).from(posts).where(eq(posts.status, 'DRAFT')),
+      this.db.select({ total: sql<number>`sum(${posts.views})` }).from(posts),
+      this.db.select({ categorie: posts.categorie, count: count() }).from(posts).groupBy(posts.categorie)
     ])
 
     return {
-      total: totalPosts,
-      published: publishedPosts,
-      drafts: draftPosts,
-      totalViews: viewsAggregate._sum.views || 0,
-      byCategory: postsByCategory.map(item => ({
+      total: totalResult[0]?.count || 0,
+      published: publishedResult[0]?.count || 0,
+      drafts: draftResult[0]?.count || 0,
+      totalViews: viewsResult[0]?.total || 0,
+      byCategory: categoryResult.map(item => ({
         category: item.categorie,
-        count: item._count
+        count: item.count
       }))
     }
   }
