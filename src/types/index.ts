@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Enum de categorías
 export const PostCategoryEnum = z.enum([
   'ARTICULOS',
   'GUIAS_LEGALES',

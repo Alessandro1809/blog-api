@@ -13,33 +13,26 @@ const fastify = Fastify({
   }
 }).withTypeProvider<ZodTypeProvider>();
 
-// Configurar validadores de Zod
 fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
 
 async function start() {
   try {
-    // Registrar CORS
     await fastify.register(cors, {
   origin: process.env.NODE_ENV === 'production' 
     ? ['*'] 
     : true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // ← Agregar esto
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 })
-    // Registrar plugins
     await fastify.register(drizzlePlugin)
     await fastify.register(authPlugin)
 
-    // Registrar rutas
     await fastify.register(postsRoutes, { prefix: '/api/v1' })
 
-    // Health check
     fastify.get('/health', async () => {
       return { status: 'ok', timestamp: new Date().toISOString() }
     })
-
-    // Iniciar servidor
     const port = Number(process.env.PORT) || 51214
     const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
 

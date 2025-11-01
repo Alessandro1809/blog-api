@@ -7,9 +7,6 @@ export interface AuthorInfo {
   username: string | null
 }
 
-/**
- * Obtiene información pública del autor desde Clerk
- */
 export async function getAuthorInfo(userId: string): Promise<AuthorInfo | null> {
   try {
     const user = await clerkClient.users.getUser(userId)
@@ -26,16 +23,11 @@ export async function getAuthorInfo(userId: string): Promise<AuthorInfo | null> 
   }
 }
 
-/**
- * Obtiene información de múltiples autores desde Clerk
- */
 export async function getAuthorsInfo(userIds: string[]): Promise<Map<string, AuthorInfo>> {
   const authorsMap = new Map<string, AuthorInfo>()
   
-  // Obtener usuarios únicos
   const uniqueUserIds = [...new Set(userIds)]
   
-  // Fetch en paralelo
   const results = await Promise.allSettled(
     uniqueUserIds.map(id => getAuthorInfo(id))
   )
