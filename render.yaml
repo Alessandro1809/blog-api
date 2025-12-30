@@ -3,8 +3,8 @@ services:
     name: blog-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: pwd && npm ci && npm run build && ls -la && ls -la dist/
+    startCommand: pwd && ls -la dist/ && npm start
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
