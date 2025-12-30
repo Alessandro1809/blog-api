@@ -62,17 +62,25 @@ DATABASE_URL=postgresql://user:password@host:port/database
 
 ### 3. **Verificar Configuración de Build**
 
-El archivo `render.yaml` ya está configurado con:
+El archivo `render.yaml` está configurado con comandos de diagnóstico:
 
 ```yaml
-buildCommand: npm install && npm run build
-startCommand: npm start
+buildCommand: pwd && npm ci && npm run build && ls -la && ls -la dist/
+startCommand: pwd && ls -la dist/ && npm start
 ```
 
 Esto asegura que:
-- Se instalen las dependencias
+- Se instalen las dependencias con `npm ci` (más rápido y determinístico)
 - Se compile TypeScript a JavaScript en `dist/`
-- Se ejecute `node dist/server.js`
+- Se muestren los paths y archivos para debugging
+- Se ejecute `npm start` que corre `node dist/server.js`
+
+> [!IMPORTANT]
+> Los comandos `pwd` y `ls -la` son temporales para debugging. Una vez que el deploy funcione, puedes simplificar a:
+> ```yaml
+> buildCommand: npm ci && npm run build
+> startCommand: npm start
+> ```
 
 ### 4. **Desplegar**
 
@@ -112,6 +120,55 @@ curl https://your-app.onrender.com/health
 ---
 
 ## 🔧 Troubleshooting
+
+### Error: "Cannot find module '/opt/render/project/src/dist/server.js'"
+
+**Causa:** Path incorrecto o working directory diferente al esperado
+
+**Diagnóstico:**
+El error muestra `/opt/render/project/src/dist/server.js` lo cual indica que:
+1. Render está ejecutando desde un directorio diferente
+2. El path tiene `src` y `dist` juntos (incorrecto)
+
+**Soluciones:**
+
+#### Paso 1: Ver los logs de diagnóstico
+Con la configuración actual de `render.yaml`, los logs mostrarán:
+- El directorio actual (`pwd`)
+- Los archivos en el directorio raíz (`ls -la`)
+- Los archivos en `dist/` (`ls -la dist/`)
+
+Busca en los logs de Render estas líneas para entender dónde está ejecutando.
+
+#### Paso 2: Verificar que el build funciona
+```bash
+# Probar build localmente
+npm run build
+
+# Verificar que dist/server.js existe
+ls -la dist/
+
+# Probar start command
+npm start
+```
+
+#### Paso 3: Si el problema persiste
+Prueba estas alternativas en `render.yaml`:
+
+**Opción A: Path absoluto explícito**
+```yaml
+startCommand: node /opt/render/project/src/dist/server.js
+```
+
+**Opción B: Cambiar al directorio correcto primero**
+```yaml
+startCommand: cd $RENDER_GIT_REPO_DIR && npm start
+```
+
+**Opción C: Usar solo el nombre del archivo**
+```yaml
+startCommand: npm start
+```
 
 ### Error: "Build failed"
 
