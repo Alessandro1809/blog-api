@@ -2,6 +2,7 @@ import { eq, and, gte, desc, sql, count } from 'drizzle-orm'
 import { type Database } from '../db/index.js'
 import { posts } from '../db/schema.js'
 import { CATEGORY_LABEL_TO_ENUM } from '../constants/categories.js'
+import { safeJsonParse, safeJsonStringify } from '../utils/json-parser.js'
 
 interface PostFilters {
   status?: string
@@ -39,17 +40,35 @@ export class PostService {
       this.db.select({ count: count() }).from(posts).where(whereClause)
     ])
 
-    return { posts: postsResult, total: totalResult[0]?.count || 0 }
+    const parsedPosts = postsResult.map(post => ({
+      ...post,
+      content: safeJsonParse(post.content, null),
+      tags: safeJsonParse(post.tags, [])
+    }))
+
+    return { posts: parsedPosts, total: totalResult[0]?.count || 0 }
   }
 
   async findPostById(id: string) {
     const result = await this.db.select().from(posts).where(eq(posts.id, id)).limit(1)
-    return result[0] || null
+    if (!result[0]) return null
+    
+    return {
+      ...result[0],
+      content: safeJsonParse(result[0].content, null),
+      tags: safeJsonParse(result[0].tags, [])
+    }
   }
 
   async findPostBySlug(slug: string) {
     const result = await this.db.select().from(posts).where(eq(posts.slug, slug)).limit(1)
-    return result[0] || null
+    if (!result[0]) return null
+    
+    return {
+      ...result[0],
+      content: safeJsonParse(result[0].content, null),
+      tags: safeJsonParse(result[0].tags, [])
+    }
   }
 
   async createPost(data: CreatePostData, authorId: string) {
@@ -60,10 +79,18 @@ export class PostService {
     const result = await this.db.insert(posts).values({
       ...data,
       authorId,
-      tags: data.tags || []
+      content: data.content ? safeJsonStringify(data.content) : null,
+      tags: safeJsonStringify(data.tags || [])
     } as any).returning()
 
-    return result[0]
+    const post = result[0]
+    if (!post) throw new Error('Failed to create post')
+
+    return {
+      ...post,
+      content: safeJsonParse(post.content, null),
+      tags: safeJsonParse(post.tags, [])
+    }
   }
 
   async updatePost(id: string, data: CreatePostData) {
@@ -71,12 +98,28 @@ export class PostService {
       data.categorie = CATEGORY_LABEL_TO_ENUM[data.categorie]
     }
 
-    const result = await this.db.update(posts).set({
+    const updateData: any = {
       ...data,
       updatedAt: new Date()
-    }).where(eq(posts.id, id)).returning()
+    }
 
-    return result[0]
+    if (data.content !== undefined) {
+      updateData.content = data.content ? safeJsonStringify(data.content) : null
+    }
+    if (data.tags !== undefined) {
+      updateData.tags = safeJsonStringify(data.tags)
+    }
+
+    const result = await this.db.update(posts).set(updateData).where(eq(posts.id, id)).returning()
+
+    const post = result[0]
+    if (!post) throw new Error('Failed to update post')
+
+    return {
+      ...post,
+      content: safeJsonParse(post.content, null),
+      tags: safeJsonParse(post.tags, [])
+    }
   }
 
   async deletePost(id: string) {

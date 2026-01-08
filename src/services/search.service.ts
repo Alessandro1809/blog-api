@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { type Database } from '../db/index.js'
+import { safeJsonParse } from '../utils/json-parser.js'
 
 interface SearchFilters {
   search?: string
@@ -33,8 +34,8 @@ export class SearchService {
         LOWER(title) LIKE LOWER('${searchPattern}') OR
         LOWER(excerpt) LIKE LOWER('${searchPattern}') OR
         LOWER(categorie) LIKE LOWER('${searchPattern}') OR
-        json_extract(tags, '$') LIKE '%"${search}"%' OR
-        LOWER(json_extract(content, '$')) LIKE LOWER('${searchPattern}')
+        LOWER(tags) LIKE LOWER('${searchPattern}') OR
+        LOWER(content) LIKE LOWER('${searchPattern}')
       )`
 
     if (status) {
@@ -52,7 +53,13 @@ export class SearchService {
 
     query += ` ORDER BY createdAt DESC LIMIT ${limit} OFFSET ${offset}`
 
-    const posts: any[] = await this.db.all(sql.raw(query))
+    const postsResult: any[] = await this.db.all(sql.raw(query))
+    
+    const posts = postsResult.map(post => ({
+      ...post,
+      content: safeJsonParse(post.content, null),
+      tags: safeJsonParse(post.tags, [])
+    }))
 
     let countQuery = `
       SELECT COUNT(*) as count
@@ -61,8 +68,8 @@ export class SearchService {
         LOWER(title) LIKE LOWER('${searchPattern}') OR
         LOWER(excerpt) LIKE LOWER('${searchPattern}') OR
         LOWER(categorie) LIKE LOWER('${searchPattern}') OR
-        json_extract(tags, '$') LIKE '%"${search}"%' OR
-        LOWER(json_extract(content, '$')) LIKE LOWER('${searchPattern}')
+        LOWER(tags) LIKE LOWER('${searchPattern}') OR
+        LOWER(content) LIKE LOWER('${searchPattern}')
       )`
 
     if (status) {
