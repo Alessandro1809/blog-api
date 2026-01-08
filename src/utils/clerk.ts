@@ -7,7 +7,7 @@ export interface AuthorInfo {
   username: string | null
 }
 
-export async function getAuthorInfo(userId: string): Promise<AuthorInfo | null> {
+export async function getAuthorInfo(userId: string): Promise<AuthorInfo> {
   try {
     const user = await clerkClient.users.getUser(userId)
     
@@ -22,7 +22,14 @@ export async function getAuthorInfo(userId: string): Promise<AuthorInfo | null> 
     if (error?.status !== 404) {
       console.error(`Error fetching user ${userId} from Clerk:`, error)
     }
-    return null
+    
+    // Return default author when user is not found
+    return {
+      id: userId,
+      name: 'NOUS Co-Founder',
+      avatar: null,
+      username: null
+    }
   }
 }
 
@@ -37,7 +44,7 @@ export async function getAuthorsInfo(userIds: string[]): Promise<Map<string, Aut
   
   results.forEach((result, index) => {
     const userId = uniqueUserIds[index]
-    if (result.status === 'fulfilled' && result.value && userId) {
+    if (result.status === 'fulfilled' && userId) {
       authorsMap.set(userId, result.value)
     }
   })

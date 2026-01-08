@@ -1,11 +1,18 @@
-import { getAuthorsInfo } from './clerk.js'
+import { getAuthorsInfo, type AuthorInfo } from './clerk.js'
 
 interface Post {
   authorId: string
   [key: string]: any
 }
 
-export async function enrichPostsWithAuthors<T extends Post>(posts: T[]): Promise<(T & { author: any })[]> {
+const DEFAULT_AUTHOR: AuthorInfo = {
+  id: 'unknown',
+  name: 'NOUS Co-Founder',
+  avatar: null,
+  username: null
+}
+
+export async function enrichPostsWithAuthors<T extends Post>(posts: T[]): Promise<(T & { author: AuthorInfo })[]> {
   if (posts.length === 0) return []
   
   const authorIds = posts.map(p => p.authorId)
@@ -13,15 +20,15 @@ export async function enrichPostsWithAuthors<T extends Post>(posts: T[]): Promis
   
   return posts.map(post => ({
     ...post,
-    author: authorsMap.get(post.authorId) || null
+    author: authorsMap.get(post.authorId) || DEFAULT_AUTHOR
   }))
 }
 
-export async function enrichPostWithAuthor<T extends Post>(post: T): Promise<T & { author: any }> {
+export async function enrichPostWithAuthor<T extends Post>(post: T): Promise<T & { author: AuthorInfo }> {
   const authorsMap = await getAuthorsInfo([post.authorId])
   
   return {
     ...post,
-    author: authorsMap.get(post.authorId) || null
+    author: authorsMap.get(post.authorId) || DEFAULT_AUTHOR
   }
 }
