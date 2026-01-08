@@ -23,5 +23,5 @@ services:
       - key: CLERK_JWKS_URL
         sync: false
       - key: PORT
-        value: 10000
+        value: 5173
     healthCheckPath: /health
