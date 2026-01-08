@@ -46,7 +46,7 @@ async function start() {
 
   try {
     const port = Number(process.env.PORT) || 51214;
-    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    const host = '0.0.0.0';
 
     await app.listen({ port, host });
     app.log.info(`🚀 Server running on http://${host}:${port}`);
