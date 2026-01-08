@@ -1,78 +1,14 @@
 # 🗄️ Database Setup Guide
 
-Este documento contiene las queries SQL necesarias para generar las tablas de la base de datos del Blog API.
+Este documento contiene las queries SQL necesarias para generar las tablas de la base de datos del Blog API usando **Drizzle ORM** y **Turso (SQLite)**.
 
 ---
 
 ## 📋 Índice
 
-- [PostgreSQL Schema (Prisma)](#postgresql-schema-prisma)
 - [SQLite Schema (Drizzle/Turso)](#sqlite-schema-drizzleturso)
 - [Descripción de Tablas](#descripción-de-tablas)
-
----
-
-## PostgreSQL Schema (Prisma)
-
-### Tabla: `posts`
-
-```sql
--- Crear enum para el estado del post
-CREATE TYPE "PostStatus" AS ENUM ('DRAFT', 'PUBLISHED');
-
--- Crear enum para las categorías
-CREATE TYPE "PostCategory" AS ENUM (
-  'ARTICULOS',
-  'GUIAS_LEGALES',
-  'JURISPRUDENCIA_COMENTADA',
-  'NOTICIAS',
-  'OPINION',
-  'RESENAS'
-);
-
--- Crear tabla de posts
-CREATE TABLE "posts" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "slug" TEXT NOT NULL UNIQUE,
-  "excerpt" TEXT,
-  "title" TEXT NOT NULL,
-  "content" JSONB,
-  "categorie" "PostCategory",
-  "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
-  "status" "PostStatus" NOT NULL DEFAULT 'DRAFT',
-  "featuredImage" TEXT,
-  "authorId" TEXT NOT NULL,
-  "views" INTEGER NOT NULL DEFAULT 0,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL
-);
-
--- Crear índice para búsquedas por slug
-CREATE UNIQUE INDEX "posts_slug_key" ON "posts"("slug");
-```
-
-### Tabla: `post_views`
-
-```sql
--- Crear tabla de vistas de posts
-CREATE TABLE "post_views" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "postId" TEXT NOT NULL,
-  "ipAddress" TEXT NOT NULL,
-  "userAgent" TEXT,
-  "viewedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
-  CONSTRAINT "post_views_postId_fkey" 
-    FOREIGN KEY ("postId") 
-    REFERENCES "posts"("id") 
-    ON DELETE CASCADE 
-    ON UPDATE CASCADE
-);
-
--- Crear índice compuesto para optimizar consultas de tracking
-CREATE INDEX "post_views_postId_ipAddress_viewedAt_idx" 
-  ON "post_views"("postId", "ipAddress", "viewedAt");
-```
+- [Comandos de Setup](#-comandos-de-setup)
 
 ---
 
@@ -161,19 +97,6 @@ Registra cada vista individual de un post para tracking y analytics.
 
 ## 🚀 Comandos de Setup
 
-### Usando Prisma (PostgreSQL)
-
-```bash
-# Generar cliente de Prisma
-npx prisma generate
-
-# Aplicar migraciones
-npx prisma migrate dev --name init
-
-# Poblar base de datos
-npm run seed
-```
-
 ### Usando Drizzle (SQLite/Turso)
 
 ```bash
@@ -189,13 +112,12 @@ npm run seed
 ## 📝 Notas Importantes
 
 > [!IMPORTANT]
-> - **PostgreSQL** usa tipos nativos como `ENUM`, `JSONB`, y `ARRAY`
-> - **SQLite** almacena JSON y arrays como `TEXT` serializado
-> - Los timestamps en PostgreSQL son `TIMESTAMP`, en SQLite son `INTEGER` (Unix epoch)
-> - Ambos esquemas mantienen la misma lógica de negocio y relaciones
+> - **SQLite/Turso** almacena JSON y arrays como `TEXT` serializado
+> - Los timestamps son `INTEGER` (Unix epoch)
+> - El parsing de JSON se maneja de forma segura en la capa de aplicación
 
 > [!TIP]
-> Para desarrollo local, se recomienda usar **Turso** (SQLite) por su simplicidad y velocidad. Para producción con alta concurrencia, considera **PostgreSQL**.
+> **Turso** ofrece SQLite distribuido globalmente con latencia ultra-baja, ideal para aplicaciones edge-ready.
 
 > [!CAUTION]
 > Al eliminar un post, todas sus vistas asociadas se eliminarán automáticamente debido a la constraint `ON DELETE CASCADE`.

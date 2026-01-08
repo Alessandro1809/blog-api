@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { db } from './db/index.js'
 import { posts } from './db/schema.js'
+import { safeJsonStringify } from './utils/json-parser.js'
 
 const samplePosts = [
   {
@@ -190,7 +191,11 @@ async function seed() {
 
     console.log('✨ Insertando posts de ejemplo...')
     for (const post of samplePosts) {
-      await db.insert(posts).values(post)
+      await db.insert(posts).values({
+        ...post,
+        content: safeJsonStringify(post.content),
+        tags: safeJsonStringify(post.tags)
+      })
       console.log(`  ✓ Creado: ${post.title}`)
     }
 

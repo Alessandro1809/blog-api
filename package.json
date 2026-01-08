@@ -25,13 +25,11 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/jwt": "^10.0.0",
     "@libsql/client": "^0.15.15",
-    "@prisma/client": "^6.17.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "fastify": "^5.6.1",
     "fastify-type-provider-zod": "^6.0.0",
     "jwks-rsa": "^3.2.0",
-    "prisma": "^6.17.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -44,8 +42,5 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }
