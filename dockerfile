@@ -22,15 +22,20 @@ RUN apt-get update -qq && \
 COPY package-lock.json package.json ./
 RUN npm ci --include=dev
 
-# Copy full source
+# Copy source
 COPY . .
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript (deploy-friendly): exclude seed/tests from compilation
+RUN node -e "const fs=require('fs'); \
+  const base='tsconfig.json'; \
+  if(!fs.existsSync(base)) { console.error('Missing tsconfig.json'); process.exit(1); } \
+  const cfg={extends:'./tsconfig.json',exclude:['src/seed.ts','**/*.test.ts','**/*.spec.ts']}; \
+  fs.writeFileSync('tsconfig.fly.json', JSON.stringify(cfg, null, 2));"
 
-# Keep only production deps (optional)
+RUN npx tsc -p tsconfig.fly.json
+
+# Keep only production deps
 RUN npm prune --omit=dev
-
 
 # -------------------------
 # Runtime stage
@@ -45,6 +50,7 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
+ENV PORT=3000
 EXPOSE 3000
-CMD ["npm", "run", "start"]
 
+CMD ["npm", "run", "start"]
