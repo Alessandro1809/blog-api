@@ -17,8 +17,11 @@ export async function getAuthorInfo(userId: string): Promise<AuthorInfo | null> 
       avatar: user.imageUrl || null,
       username: user.username || null
     }
-  } catch (error) {
-    console.error(`Error fetching user ${userId} from Clerk:`, error)
+  } catch (error: any) {
+    // Only log if it's not a 404 (user not found is expected for users in different Clerk apps)
+    if (error?.status !== 404) {
+      console.error(`Error fetching user ${userId} from Clerk:`, error)
+    }
     return null
   }
 }
