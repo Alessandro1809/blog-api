@@ -20,10 +20,11 @@ async function start() {
   try {
     await fastify.register(cors, {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['*'] 
+    ? ['https://admin.nous.cr', 'http://localhost:4321'] 
     : true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 })
     await fastify.register(drizzlePlugin)
     await fastify.register(authPlugin)
@@ -38,7 +39,7 @@ async function start() {
 
     await fastify.listen({ port, host })
     fastify.log.info(`🚀 Server running on http://${host}:${port}`)
-  } catch (err) {
+  } catch (err) {q
     fastify.log.error(err)
     process.exit(1)
   }
