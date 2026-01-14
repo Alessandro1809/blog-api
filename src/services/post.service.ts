@@ -17,6 +17,12 @@ interface CreatePostData {
 export class PostService {
   constructor(private db: Database) {}
 
+  private parseContent(content: string | null): any {
+    if (!content) return null;
+    if (content.startsWith('---')) return content; // Es markdown
+    return safeJsonParse(content, null); // Es JSON
+  }
+
   async findAllPosts(filters: PostFilters, limit: number, offset: number) {
     const conditions = []
 
@@ -42,7 +48,7 @@ export class PostService {
 
     const parsedPosts = postsResult.map(post => ({
       ...post,
-      content: safeJsonParse(post.content, null),
+      content: this.parseContent(post.content),
       tags: safeJsonParse(post.tags, [])
     }))
 
@@ -55,7 +61,7 @@ export class PostService {
     
     return {
       ...result[0],
-      content: safeJsonParse(result[0].content, null),
+      content: this.parseContent(result[0].content),
       tags: safeJsonParse(result[0].tags, [])
     }
   }
@@ -66,7 +72,7 @@ export class PostService {
     
     return {
       ...result[0],
-      content: safeJsonParse(result[0].content, null),
+      content: this.parseContent(result[0].content),
       tags: safeJsonParse(result[0].tags, [])
     }
   }
@@ -79,7 +85,9 @@ export class PostService {
     const result = await this.db.insert(posts).values({
       ...data,
       authorId,
-      content: data.content ? safeJsonStringify(data.content) : null,
+      content: typeof data.content === 'string' 
+        ? data.content 
+        : (data.content ? safeJsonStringify(data.content) : null),
       tags: safeJsonStringify(data.tags || [])
     } as any).returning()
 
@@ -88,7 +96,7 @@ export class PostService {
 
     return {
       ...post,
-      content: safeJsonParse(post.content, null),
+      content: this.parseContent(post.content),
       tags: safeJsonParse(post.tags, [])
     }
   }
@@ -104,7 +112,9 @@ export class PostService {
     }
 
     if (data.content !== undefined) {
-      updateData.content = data.content ? safeJsonStringify(data.content) : null
+      updateData.content = typeof data.content === 'string'
+        ? data.content
+        : (data.content ? safeJsonStringify(data.content) : null)
     }
     if (data.tags !== undefined) {
       updateData.tags = safeJsonStringify(data.tags)
@@ -117,7 +127,7 @@ export class PostService {
 
     return {
       ...post,
-      content: safeJsonParse(post.content, null),
+      content: this.parseContent(post.content),
       tags: safeJsonParse(post.tags, [])
     }
   }
