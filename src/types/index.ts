@@ -11,6 +11,7 @@ export const createPostSchema = z.object({
   categorie: z.string().optional(),
   tags: z.string().optional(),
   status: z.enum(['DRAFT', 'PUBLISHED']).default('DRAFT'),
+  featured: z.boolean().default(false),
   featuredImage: z.string().optional(),
   authorId: z.string(),
 });
@@ -27,7 +28,8 @@ export const PostQuerySchema = z.object({
   offset: z.coerce.number().min(0).default(0),
   search: z.string().optional(),
   date: z.string().optional(),
-  categorie: z.string().optional()
+  categorie: z.string().optional(),
+  featured: z.boolean().optional()
 });
 
 export type CreatePostBody = z.infer<typeof createPostSchema>

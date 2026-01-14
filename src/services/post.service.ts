@@ -8,6 +8,7 @@ interface PostFilters {
   status?: string
   categorie?: string
   date?: string
+  featured?: boolean
 }
  
 interface CreatePostData {
@@ -45,7 +46,11 @@ export class PostService {
       const dateTimestamp = Math.floor(new Date(filters.date).getTime() / 1000)
       conditions.push(gte(posts.createdAt, new Date(dateTimestamp * 1000)))
     }
- 
+
+    if (filters.featured !== undefined) {
+      conditions.push(eq(posts.featured, filters.featured))
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
  
     const [postsResult, totalResult] = await Promise.all([

@@ -13,7 +13,7 @@ export const getAllPosts = async (
   reply: FastifyReply,
   db: Database
 ) => {
-  const { status, limit, offset, search, date, categorie } = request.query as any
+  const { status, limit, offset, search, date, categorie, featured } = request.query as any
 
   const postService = new PostService(db)
   const searchService = new SearchService(db)
@@ -23,7 +23,7 @@ export const getAllPosts = async (
 
   if (search) {
     const result = await searchService.searchPosts(
-      { search, status, categorie, date },
+      { search, status, categorie, date, featured },
       limit,
       offset
     )
@@ -31,7 +31,7 @@ export const getAllPosts = async (
     total = result.total
   } else {
     const result = await postService.findAllPosts(
-      { status, categorie, date },
+      { status, categorie, date, featured },
       limit,
       offset
     )

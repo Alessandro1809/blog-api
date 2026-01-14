@@ -7,6 +7,7 @@ interface SearchFilters {
   status?: string
   categorie?: string
   date?: string
+  featured?: boolean
 }
 
 interface SearchResult {
@@ -22,13 +23,13 @@ export class SearchService {
     limit: number,
     offset: number
   ): Promise<SearchResult> {
-    const { search, status, categorie, date } = filters
+    const { search, status, categorie, date, featured } = filters
     const searchPattern = `%${search}%`
     
     let query = `
       SELECT 
         id, title, slug, categorie, tags, content, excerpt, 
-        status, featuredImage, createdAt, updatedAt, authorId, views
+        status, featured, featuredImage, createdAt, updatedAt, authorId, views
       FROM posts
       WHERE (
         LOWER(title) LIKE LOWER('${searchPattern}') OR
@@ -49,6 +50,10 @@ export class SearchService {
     if (date) {
       const dateTimestamp = Math.floor(new Date(date).getTime() / 1000)
       query += ` AND createdAt >= ${dateTimestamp}`
+    }
+
+    if (featured !== undefined) {
+      query += ` AND featured = ${featured ? 1 : 0}`
     }
 
     query += ` ORDER BY createdAt DESC LIMIT ${limit} OFFSET ${offset}`
@@ -83,6 +88,10 @@ export class SearchService {
     if (date) {
       const dateTimestamp = Math.floor(new Date(date).getTime() / 1000)
       countQuery += ` AND createdAt >= ${dateTimestamp}`
+    }
+
+    if (featured !== undefined) {
+      countQuery += ` AND featured = ${featured ? 1 : 0}`
     }
 
     const totalResult: any = await this.db.all(sql.raw(countQuery))

@@ -10,6 +10,7 @@ export const posts = sqliteTable('posts', {
   categorie: text('categorie'),
   tags: text('tags').notNull().default('[]'),
   status: text('status').notNull().default('DRAFT'),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
   featuredImage: text('featuredImage'),
   authorId: text('authorId').notNull(),
   views: integer('views').notNull().default(0),
