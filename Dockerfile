@@ -3,7 +3,7 @@
 ARG NODE_VERSION=22.21.1
 FROM node:${NODE_VERSION}-slim AS base
 
-LABEL fly_launch_runtime="Node.js/Prisma"
+LABEL fly_launch_runtime="Node.js"
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -18,42 +18,24 @@ RUN apt-get update -qq && \
     build-essential node-gyp openssl pkg-config python-is-python3 && \
   rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Install deps (dev deps needed for prisma/tsc)
+# Install deps (dev deps needed for tsc)
 COPY package-lock.json package.json ./
 RUN npm ci --include=dev
 
-# Copy full source
+# Copy source
 COPY . .
 
-# Generate Prisma Client AFTER source is copied
-RUN npx prisma generate
+# Build TypeScript (deploy-friendly): exclude seed/tests from compilation
+RUN node -e "const fs=require('fs'); \
+  const base='tsconfig.json'; \
+  if(!fs.existsSync(base)) { console.error('Missing tsconfig.json'); process.exit(1); } \
+  const cfg={extends:'./tsconfig.json',exclude:['src/seed.ts','**/*.test.ts','**/*.spec.ts']}; \
+  fs.writeFileSync('tsconfig.fly.json', JSON.stringify(cfg, null, 2));"
 
-# Debug/verify generated output BEFORE tsc:
-# If this fails, it means Prisma is not generating where your TS import expects.
-RUN echo "== Prisma generated folders ==" && \
-  (ls -la /app/src/generated || true) && \
-  (ls -la /app/src/generated/prisma || true) && \
-  (ls -la /app/generated || true) && \
-  (ls -la /app/generated/prisma || true) && \
-  echo "== Finding prisma index.js ==" && \
-  (find /app -maxdepth 6 -type f -path "*generated*/prisma/index.js" -print || true) && \
-  echo "== Finding prisma index.d.ts ==" && \
-  (find /app -maxdepth 6 -type f -path "*generated*/prisma/index.d.ts" -print || true)
+RUN npx tsc -p tsconfig.fly.json
 
-# Hard requirement for YOUR current TS import:
-# src/plugins/prisma.ts imports: ../generated/prisma/index.js
-RUN test -f /app/src/generated/prisma/index.js
-
-# Build TypeScript
-RUN npm run build
-
-# Runtime import path from dist expects dist/generated/prisma/index.js
-RUN mkdir -p /app/dist/generated/prisma && \
-  cp -R /app/src/generated/prisma/* /app/dist/generated/prisma/
-
-# Keep only production deps (optional)
+# Keep only production deps
 RUN npm prune --omit=dev
-
 
 # -------------------------
 # Runtime stage
@@ -67,8 +49,9 @@ RUN apt-get update -qq && \
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
 
+ENV PORT=3000
 EXPOSE 3000
+
 CMD ["npm", "run", "start"]
 

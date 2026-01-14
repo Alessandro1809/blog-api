@@ -1,23 +1,20 @@
-# fly.toml app configuration file generated for blog-api-fl on 2026-01-08T20:41:25Z
+# fly.toml app configuration file generated for blog-api-v1 on 2026-01-14T22:20:56Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'blog-api-v1'
-primary_region = 'iad'
+primary_region = 'dfw'
 
 [build]
 
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
-
-[env]
-  PORT = "3000"
 
 [[vm]]
   memory = '1gb'
