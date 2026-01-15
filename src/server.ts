@@ -22,8 +22,8 @@ export function buildApp() {
 
 export async function registerPlugins(app: any) {
   await app.register(cors, {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://admin.nous.cr', 'http://localhost:4321'] 
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://admin.alessandrodiaz.dev', 'https://admin.nous.cr', 'http://localhost:4321']
       : true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
