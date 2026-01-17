@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'blog-api-v1'
+app = 'test-api-v1'
 primary_region = 'dfw'
 
 [build]
