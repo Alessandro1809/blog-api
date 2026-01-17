@@ -23,7 +23,7 @@ export function buildApp() {
 export async function registerPlugins(app: any) {
   await app.register(cors, {
     origin: process.env.NODE_ENV === 'production'
-      ? ['https://cms-only-test.vercel.app', 'http://localhost:4321']
+      ? ['https://admin.alessandrodiaz.dev','https://alessandrodiaz.dev', 'http://localhost:4321']
       : true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
